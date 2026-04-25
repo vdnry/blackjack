@@ -5,17 +5,12 @@
 #include <random>
 using namespace std;
 
-int myRand() {
-    static std::mt19937 gen(std::random_device{}());
-    static std::uniform_int_distribution<> dist(0, 51);
-    return dist(gen);
-}
-
 class Card {
 private:
     string suit;
     string symbol;
     int value;
+
 public:
     Card(string s, string y, int v) {
         suit = s;
@@ -34,6 +29,31 @@ public:
     int getValue() {
         return value;
     }
+
+    string getSymbol() {
+        return symbol;
+    }
+
+    void setValue(int newValue) {
+        value = newValue;
+    }
+};
+
+class Hand {
+private:
+    vector<Card> hand;
+public:
+    void addCard(Card card) {
+        hand.push_back(card);
+    }
+
+    string getHand() {
+        string str = "";
+        for (Card i : hand) {
+            str += i.showCard() + " ";
+        }
+        return str;
+    }
 };
 
 class Deck {
@@ -42,9 +62,8 @@ private:
     string symbols[13] = {"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
     int values[13] = {11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10};
     static vector<Card> deck;
-public:
-#include <random>
 
+public:
     Deck() {
         while (deck.size() < 52) {
             for (string suit : suits) {
@@ -62,9 +81,8 @@ public:
         shuffle(deck.begin(), deck.end(), gen);
     }
 
-    Card getCard() {
-        srand(time(0));
-        return deck[rand() % 52];
+    Card getCard(int i) {
+        return deck[51 - i];
     }
 
     void showDeck() {
@@ -75,12 +93,45 @@ public:
     }
 };
 
+class Game {
+private:
+    int index = 0;
+    int playerTotal = 0;
+    int dealerTotal = 0;
+    Hand playerHand;
+    Hand dealerHand;
+    Deck deck;
+
+public:
+    Game() {
+        deck.shuffleDeck();
+        playerDraw();
+        dealerDraw();
+        playerDraw();
+        showHands();
+    }
+    
+    void playerDraw() {
+        Card drawnCard = deck.getCard(index++);
+        playerHand.addCard(drawnCard);
+        playerTotal += drawnCard.getValue();
+    }
+    
+    void dealerDraw() {
+        Card drawnCard = deck.getCard(index++);
+        dealerHand.addCard(drawnCard);
+        dealerTotal += drawnCard.getValue();
+    }
+    
+    void showHands() {
+        cout << "Dealer's Hand:\t" << dealerHand.getHand() << "(" << dealerTotal << ")" << endl;
+        cout << "Your Hand:\t" << playerHand.getHand() << "(" << playerTotal << ")" << endl;
+    }
+};
+
 vector<Card> Deck::deck = {};
 
 int main() {
-    Deck main = Deck();
-    cout << main.getCard().showCard() << endl;
-    main.shuffleDeck();
-    main.showDeck();
+    Game game;
     return 0;
 }
