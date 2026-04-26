@@ -12,6 +12,9 @@ private:
     int value;
 
 public:
+
+    Card() { }
+
     Card(string s, string y, int v) {
         suit = s;
         symbol = y;
@@ -100,7 +103,10 @@ private:
     int dealerTotal = 0;
     Hand playerHand;
     Hand dealerHand;
+    Card dealerHiddenCard;
     Deck deck;
+    bool winner;
+    bool finished = 0;
 
 public:
     Game() {
@@ -108,7 +114,18 @@ public:
         playerDraw();
         dealerDraw();
         playerDraw();
+        dealerHiddenCard = deck.getCard(index++);
         showHands();
+        if (playerTotal == 21) {
+            winner = 1;
+            gameOver();
+        }
+        while (!finished) {
+            int input;
+            cout << "1. Hit\n2. Stand" << endl;
+            cin >> input;
+            input == 1 ? hit() : stand();
+        }
     }
     
     void playerDraw() {
@@ -122,16 +139,58 @@ public:
         dealerHand.addCard(drawnCard);
         dealerTotal += drawnCard.getValue();
     }
+
+    void hit() {
+        system("clear");
+        playerDraw();
+        showHands();
+        if (playerTotal > 21) {
+            winner = 0;
+            gameOver();
+        } else if (playerTotal == 21) {
+            winner = 1;
+            gameOver();
+        }
+    }
+
+    void stand() {
+        system("clear");
+        string dummy;
+        dealerHand.addCard(dealerHiddenCard);
+        dealerTotal += dealerHiddenCard.getValue();
+        cin.ignore();
+        while (dealerTotal < 17) {
+            system("clear");
+            showHands();
+            cout << "Enter to Continue:" << endl;
+            getline(cin, dummy);
+            dealerDraw();
+        } 
+        system("clear");
+        showHands();
+        dealerTotal > 21 || dealerTotal < playerTotal ? winner = 1 : winner = 0;
+        gameOver();
+    }
+
+    void gameOver() {
+        finished = 1;
+        if (winner == 1) {
+            cout << "You Win!" << endl;
+        } else if (winner == 0) {
+            cout << (playerTotal == dealerTotal ? "You've Drawn." : "You Lose") << endl;
+        }
+    }
     
     void showHands() {
         cout << "Dealer's Hand:\t" << dealerHand.getHand() << "(" << dealerTotal << ")" << endl;
-        cout << "Your Hand:\t" << playerHand.getHand() << "(" << playerTotal << ")" << endl;
+        cout << "Your Hand:\t" << playerHand.getHand() << "(" << playerTotal << ")\n" << endl;
     }
 };
 
 vector<Card> Deck::deck = {};
 
 int main() {
+    system("clear");
     Game game;
     return 0;
 }
