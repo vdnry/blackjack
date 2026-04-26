@@ -12,8 +12,11 @@ private:
     int value;
 
 public:
-
-    Card() { }
+    Card() {
+        suit = "Joker";
+        symbol = "Joker";
+        value = 0;
+    }
 
     Card(string s, string y, int v) {
         suit = s;
@@ -21,105 +24,146 @@ public:
         value = v;
     }
 
-    bool operator==(Card c) {
-        return showCard() == c.showCard();
-    }
+    string showCard() const { return suit + symbol; }
+    int getValue() const { return value; }
+    string getSymbol() const { return symbol; }
+    void setValue(int newValue) { value = newValue; }
+};
 
-    string showCard() {
-        return suit + symbol;
+class Deck {
+    private:
+    string suits[4] = {"♠", "♣", "♥", "♦"};
+    string symbols[13] = {"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
+    int values[13] = {11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10};
+    vector<Card> deck;
+    
+    public:
+    Deck() {
+        for (string suit : suits) {
+            int i = 0;
+            for (string symbol : symbols) {
+                deck.push_back(Card(suit, symbol, values[i++]));
+            }
+        }
+        static mt19937 gen(random_device{}());
+        shuffle(deck.begin(), deck.end(), gen);
     }
-
-    int getValue() {
-        return value;
-    }
-
-    string getSymbol() {
-        return symbol;
-    }
-
-    void setValue(int newValue) {
-        value = newValue;
+    
+    Card getCard() {
+        Card card = deck.back();
+        deck.pop_back();
+        return card;
     }
 };
 
 class Hand {
-private:
+protected:
     vector<Card> hand;
+    Deck* deck = nullptr;
+    int total = 0;
+    bool inPlay = 1;
+    
 public:
-    void addCard(Card card) {
-        hand.push_back(card);
+    Hand(Deck* d) {
+        deck = d;
+        drawCard();
     }
 
-    string getHand() {
+    void finishPlay() {
+        inPlay = 0;
+    }
+
+    string getHand() const {
         string str = "";
         for (Card i : hand) {
             str += i.showCard() + " ";
         }
+        if (getAceCondition() && inPlay) str += getAceString();
+        else str += "(" + to_string(getValue()) + ")";
         return str;
     }
-};
 
-class Deck {
-private:
-    string suits[4] = {"♠", "♣", "♥", "♦"};
-    string symbols[13] = {"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
-    int values[13] = {11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10};
-    static vector<Card> deck;
+    bool getAceCondition() const { return checkAce(); }
 
-public:
-    Deck() {
-        while (deck.size() < 52) {
-            for (string suit : suits) {
-                int i = 0;
-                for (string symbol : symbols) {
-                    deck.push_back(Card(suit, symbol, values[i]));
-                    i++;
-                }
+    string getAceString() const { return "(" + to_string(getValue()) + "," + to_string(getValue() - 10) + ")"; }
+
+    void drawCard() {
+        Card drawnCard = deck->getCard();
+        hand.push_back(drawnCard);
+        total += drawnCard.getValue();
+    }
+
+    bool checkAce() const {
+        for (const Card& c : hand) {
+            if (c.getSymbol() == "A" && c.getValue() == 11) return 1;
+        }
+        return 0;
+    }
+
+    bool confirmBust() {
+        bool aceFound = 0;
+        for (Card& c : hand) {
+            if (c.getSymbol() == "A" && c.getValue() == 11) {
+                c.setValue(1);
+                total -= 10;
+                aceFound = 1;
             }
         }
+        return aceFound;
     }
 
-    void shuffleDeck() {
-        static mt19937 gen(random_device{}());
-        shuffle(deck.begin(), deck.end(), gen);
+    int getValue() const { return total; }
+
+    bool operator==(const Hand& h) const { return getValue() == h.getValue(); }
+    bool operator==(const int i) const { return getValue() == i; }
+    bool operator>(const Hand& h) const { return getValue() > h.getValue(); }
+    bool operator>(const int i) const { return getValue() > i; }
+    bool operator<(const Hand& h) const { return getValue() < h.getValue(); }
+    bool operator<(const int i) const { return getValue() < i; }
+    bool operator<=(const Hand& h) const { return getValue() <= h.getValue(); }
+    bool operator<=(const int i) const { return getValue() <= i; }
+};
+
+class DealerHand : public Hand {
+private:
+    Card dealerHiddenCard;
+    int hiddenCardValue;
+
+public:
+    DealerHand(Deck* d) : Hand(d) { };
+
+    void drawHiddenCard() {
+        dealerHiddenCard = deck->getCard();
+        hiddenCardValue = dealerHiddenCard.getValue();
     }
 
-    Card getCard(int i) {
-        return deck[51 - i];
+    void revealHiddenCard() {
+        hand.push_back(dealerHiddenCard);
+        total += hiddenCardValue;
     }
 
-    void showDeck() {
-        for (Card c : deck) {
-            cout << c.showCard() << " ";
-        }
-        cout << endl;
-    }
+    bool getAceCondition() const { return checkAce() && getValue() < 17; }
 };
 
 class Game {
 private:
-    int index = 0;
-    int playerTotal = 0;
-    int dealerTotal = 0;
-    Hand playerHand;
-    Hand dealerHand;
-    Card dealerHiddenCard;
     Deck deck;
+    Hand playerHand = Hand(&deck);
+    DealerHand dealerHand = DealerHand(&deck);
     bool winner;
     bool finished = 0;
 
 public:
     Game() {
-        deck.shuffleDeck();
-        playerDraw();
-        dealerDraw();
-        playerDraw();
-        dealerHiddenCard = deck.getCard(index++);
-        showHands();
-        if (playerTotal == 21) {
-            winner = 1;
+        playerHand.drawCard();
+        dealerHand.drawHiddenCard();
+        if (playerHand == 21) {
+            dealerHand.revealHiddenCard();
+            showHands();
+            playerHand == dealerHand ? winner = 0 : winner = 1;
             gameOver();
         }
+        if (!finished) { showHands(); }
         while (!finished) {
             int input;
             cout << "1. Hit\n2. Stand" << endl;
@@ -127,67 +171,55 @@ public:
             input == 1 ? hit() : stand();
         }
     }
-    
-    void playerDraw() {
-        Card drawnCard = deck.getCard(index++);
-        playerHand.addCard(drawnCard);
-        playerTotal += drawnCard.getValue();
-    }
-    
-    void dealerDraw() {
-        Card drawnCard = deck.getCard(index++);
-        dealerHand.addCard(drawnCard);
-        dealerTotal += drawnCard.getValue();
-    }
 
     void hit() {
-        system("clear");
-        playerDraw();
+        playerHand.drawCard();
         showHands();
-        if (playerTotal > 21) {
+        if (playerHand > 21 && !playerHand.confirmBust()) {
             winner = 0;
             gameOver();
-        } else if (playerTotal == 21) {
-            winner = 1;
-            gameOver();
+        } 
+        if (!finished) { showHands(); }
+        if (playerHand == 21) {
+            playerHand.finishPlay();
+            stand();
         }
     }
 
     void stand() {
-        system("clear");
         string dummy;
-        dealerHand.addCard(dealerHiddenCard);
-        dealerTotal += dealerHiddenCard.getValue();
         cin.ignore();
-        while (dealerTotal < 17) {
-            system("clear");
+        dealerHand.revealHiddenCard();
+        while (dealerHand < 17 && dealerHand <= playerHand) {
             showHands();
             cout << "Enter to Continue:" << endl;
             getline(cin, dummy);
-            dealerDraw();
-        } 
-        system("clear");
-        showHands();
-        dealerTotal > 21 || dealerTotal < playerTotal ? winner = 1 : winner = 0;
+            dealerHand.drawCard();
+            if (dealerHand > 21) dealerHand.confirmBust();
+        }
+        dealerHand > 21 || dealerHand < playerHand ? winner = 1 : winner = 0;
         gameOver();
     }
 
     void gameOver() {
         finished = 1;
+        playerHand.finishPlay();
+        dealerHand.finishPlay();
+        
+        showHands();
         if (winner == 1) {
             cout << "You Win!" << endl;
         } else if (winner == 0) {
-            cout << (playerTotal == dealerTotal ? "You've Drawn." : "You Lose") << endl;
+            cout << (playerHand == dealerHand ? "You've Drawn." : "You Lose.") << endl;
         }
     }
     
     void showHands() {
-        cout << "Dealer's Hand:\t" << dealerHand.getHand() << "(" << dealerTotal << ")" << endl;
-        cout << "Your Hand:\t" << playerHand.getHand() << "(" << playerTotal << ")\n" << endl;
+        system("clear");
+        cout << "Dealer's Hand:\t" << dealerHand.getHand() << endl;
+        cout << "Your Hand:\t" << playerHand.getHand() << endl;
     }
 };
-
-vector<Card> Deck::deck = {};
 
 int main() {
     system("clear");
