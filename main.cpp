@@ -5,6 +5,9 @@
 #include <random>
 using namespace std;
 
+bool isWindows = 0;
+const char* clear = (isWindows ? "cls" : "clear");
+
 class Card {
 private:
     string suit;
@@ -215,14 +218,14 @@ public:
     }
     
     void showHands() {
-        system("clear");
+        system(clear);
         cout << "Dealer's Hand:\t" << dealerHand.getHand() << endl;
         cout << "Your Hand:\t" << playerHand.getHand() << endl;
     }
 };
 
 int main() {
-    system("clear");
+    system(clear);
     Game game;
     return 0;
 }
