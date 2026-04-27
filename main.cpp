@@ -166,7 +166,7 @@ public:
         if (!finished) { showHands(); }
         while (!finished) {
             int input;
-            cout << "1. Hit\n2. Stand" << endl;
+            cout << "\n1. Hit\n2. Stand\n>> ";
             cin >> input;
             input == 1 ? hit() : stand();
         }
@@ -192,7 +192,7 @@ public:
         dealerHand.revealHiddenCard();
         while (dealerHand < 17 && dealerHand <= playerHand) {
             showHands();
-            cout << "Enter to Continue:" << endl;
+            cout << "\nEnter to Continue:\n" << endl;
             getline(cin, dummy);
             dealerHand.drawCard();
             if (dealerHand > 21) dealerHand.confirmBust();
@@ -208,9 +208,9 @@ public:
         
         showHands();
         if (winner == 1) {
-            cout << "You Win!" << endl;
+            cout << "\nYou Win!\n" << endl;
         } else if (winner == 0) {
-            cout << (playerHand == dealerHand ? "You've Drawn." : "You Lose.") << endl;
+            cout << (playerHand == dealerHand ? "\nYou've Drawn.\n" : "\nYou Lose.\n") << endl;
         }
     }
     
